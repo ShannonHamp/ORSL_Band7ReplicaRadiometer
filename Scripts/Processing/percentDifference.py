@@ -66,7 +66,7 @@ max_diff = np.max(gdf_radiometer['percent_difference'])
 min_diff = np.min(gdf_radiometer['percent_difference']) 
 
 #----------------------------------------------------------------------------------------
-#------------------------------------PLOT------------------------------------------------
+#-------------------------PERCENT DIFF PLOT----------------------------------------------
 # --- Plot the standard deviation with colorbar and overlay cropped grid ---
 cmap = cm.RdYlBu
 norm = colors.Normalize(vmin=gdf_radiometer['percent_difference'].min(), vmax=gdf_radiometer['percent_difference'].max())
@@ -129,5 +129,58 @@ ax.annotate(
     
 # Formatting
 ax.set_axis_off()
+plt.tight_layout()
+plt.show()
+
+
+
+#----------------------------------------------------------------------------------------
+#-------------------------BOX & WHISKER PLOT----------------------------------------------
+
+fig2, ax2 = plt.subplots(figsize=(8, 8))
+
+# Prepare data for boxplot
+data_to_plot = [
+    gdf_radiometer['value'].dropna(),
+    gdf_radiometer['avg_landsat_value'].dropna()
+]
+
+# Labels for each box
+labels = ['UBRR', 'OLI Band 7']
+
+
+# ----- Print descriptive statistics for each dataset -----
+for label, data in zip(labels, data_to_plot):
+    p25 = np.percentile(data, 25)
+    p50 = np.percentile(data, 50)   # median
+    p75 = np.percentile(data, 75)
+    data_min = np.min(data)
+    data_max = np.max(data)
+    data_range = data_max - data_min
+
+    print(f"\n--- {label} ---")
+    print(f"Min: {data_min:.4f}")
+    print(f"25th percentile: {p25:.4f}")
+    print(f"Median (50th): {p50:.4f}")
+    print(f"75th percentile: {p75:.4f}")
+    print(f"Max: {data_max:.4f}")
+    print(f"Range: {data_range:.4f}")
+
+# Create the boxplot
+ax2.boxplot(
+    data_to_plot,
+    labels=labels,
+    patch_artist=True,
+    boxprops=dict(facecolor='lightblue', color='black', linewidth=4),
+    medianprops=dict(color='red', linewidth=3),
+    whiskerprops=dict(color='black', linewidth=3),
+    capprops=dict(color='black', linewidth=3),
+    flierprops=dict(marker='o', markerfacecolor='gray', markersize=6)
+)
+
+# Titles and formatting
+ax2.set_ylabel("Reflectance (%)", fontsize=30)
+ax2.tick_params(axis='both', which='major',labelsize=30,length=10, width=2)
+
 plt.tight_layout()
 plt.show()

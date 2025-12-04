@@ -11,6 +11,8 @@ from scipy.stats import pearsonr, shapiro, normaltest
 from sklearn.preprocessing import PowerTransformer
 from scipy.stats import boxcox
 import seaborn as sns
+import statsmodels.api as sm
+from scipy.stats import linregress
 
 
 #-------------------------------------------------------------------
@@ -419,29 +421,49 @@ if ks_p_std < 0.05:
 else:
     print("  --> No significant difference between distributions (fail to reject H0).")
 
-#----------------------------------------------------------------------------------------
-#------------------------------------PLOT------------------------------------------------
-# ------------------- Scatterplot: Percent Difference vs. Avg Slope -------------------
+
+# #----------------------------------------------------------------------------------------
+# #--------------------PLOT without Power Transforms (no normal distribution)------------------------------------
+# # ------------------- Scatterplot: Percent Difference vs. Avg Slope -------------------
+# Spatial join: assign each circle to a pixel
+circle_with_pixel = gpd.sjoin(
+    gdf_circles[['percent_difference', 'geometry']],
+    pixel_grid1[['pixel_id', 'geometry']],
+    how='inner',
+    predicate='intersects'
+)
+
 # Recreate merged_df for avg slope correlation if needed
 merged_df_avg = pd.merge(
-    pixel_grid1[['pixel_id', 'boxcox_avg_slope']],
-    circle_with_pixel[['pixel_id', 'yeo_percent_difference']],
+    pixel_grid1[['pixel_id', 'avg_slope']],
+    circle_with_pixel[['pixel_id', 'percent_difference']],
     on='pixel_id',
     how='inner'
 )
 
+
+# Drop missing values
+df_avg = merged_df_avg.dropna(subset=['avg_slope', 'percent_difference'])
+
+# Compute R-squared
+slope, intercept, r_value, p_value, std_err = linregress(df_avg['avg_slope'], df_avg['percent_difference'])
+r_squared_avg = r_value**2
+
+print(f"Slope (Avg Slope vs Percent Difference): {slope:.4f}")
+print(f"R-squared (Avg Slope vs Percent Difference): {r_squared_avg:.4f}")
+
 fig, ax = plt.subplots(figsize=(8, 6))
 sns.regplot(
-    x='boxcox_avg_slope',
-    y='yeo_percent_difference',
-    data=merged_df_avg.dropna(subset=['boxcox_avg_slope', 'yeo_percent_difference']),
+    x='avg_slope',
+    y='percent_difference',
+    data=merged_df_avg.dropna(subset=['avg_slope', 'percent_difference']),
     scatter_kws={'s': 50, 'alpha': 0.7},
     line_kws={'color': 'red'},
+    ci=None,
     ax=ax
 )
-#ax.set_title("Yeo-Johnson Percent Difference vs. Box-Cox Avg Slope", fontsize=14)
-ax.set_xlabel("Transformed Average Slope", fontsize=20)
-ax.set_ylabel("Transformed Percent Difference", fontsize=20)
+ax.set_xlabel("Average Slope (degrees)", fontsize=20)
+ax.set_ylabel("Percent Difference (%)", fontsize=20)
 plt.tick_params(axis='both', which='major', labelsize=20)
 plt.tight_layout()
 plt.show()
@@ -449,28 +471,38 @@ plt.show()
 # ------------------- Scatterplot: Percent Difference vs. Std Slope -------------------
 # Recreate merged_df for avg slope correlation if needed
 merged_df_std = pd.merge(
-    pixel_grid[['pixel_id', 'boxcox_std_slope']],
-    circle_with_pixel[['pixel_id', 'yeo_percent_difference']],
+    pixel_grid[['pixel_id', 'std_slope']],
+    circle_with_pixel[['pixel_id', 'percent_difference']],
     on='pixel_id',
     how='inner'
 )
 
+
+df_std = merged_df_std.dropna(subset=['std_slope', 'percent_difference'])
+
+# Compute R-squared
+slope, intercept, r_value, p_value, std_err = linregress(df_std['std_slope'], df_std['percent_difference'])
+r_squared_std = r_value**2
+
+print(f"Slope (Std Slope vs Percent Difference): {slope:.4f}")
+print(f"R-squared (Std Slope vs Percent Difference): {r_squared_std:.4f}")
+
+
 fig, ax = plt.subplots(figsize=(8, 6))
 sns.regplot(
-    x='boxcox_std_slope',
-    y='yeo_percent_difference',
-    data=merged_df_std.dropna(subset=['boxcox_std_slope', 'yeo_percent_difference']),
+    x='std_slope',
+    y='percent_difference',
+    data=merged_df_std.dropna(subset=['std_slope', 'percent_difference']),
     scatter_kws={'s': 50, 'alpha': 0.7},
     line_kws={'color': 'red'},
+    ci=None,
     ax=ax
 )
-#ax.set_title("Yeo-Johnson Percent Difference vs. Box-Cox Std Slope", fontsize=14)
-ax.set_xlabel("Transformed Standard Deviation of Slope", fontsize=20)
-ax.set_ylabel("Transformed Percent Difference", fontsize=20)
+ax.set_xlabel("Standard Deviation of Slope (degrees)", fontsize=20)
+ax.set_ylabel("Percent Difference (%)", fontsize=20)
 plt.tick_params(axis='both', which='major', labelsize=20)
 plt.tight_layout()
 plt.show()
-
 
 
 
